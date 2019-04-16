@@ -39,7 +39,7 @@ public class LOCALCrawler extends SyncCrawler {
                 //client.get(LOCALInfo.PATH+"/setlang.php?lang=en").getBody();
                 problemUrl = getProblemUrl(host, problemId);
                 html = client.get(problemUrl, HttpStatusValidator.SC_OK).getBody();
-                System.out.println("hhh=>"+html);
+               // System.out.println("hhh=>"+html);
                 html = HtmlHandleUtil.transformUrlToAbs(html, problemUrl);
                 break;
             } catch (Throwable t) {
@@ -49,28 +49,39 @@ public class LOCALCrawler extends SyncCrawler {
         Validate.notBlank(html);
         
         RawProblemInfo info = new RawProblemInfo();
-        info.title = Tools.regFind(html, "<center><h2>([\\s\\S]*?)</h2>").replaceAll(problemId + ": ", "").trim();
-        info.source = (Tools.regFind(html, "<h2>Source</h2>[\\s\\S]*?<div class=content><p>([\\s\\S]*?)</p></div><center>"));
+        info.title = Tools.regFind(html, "<center><h3>([\\s\\S]*?)</h3>").replaceAll(problemId + ": ", "").trim();
+        info.source = (Tools.regFind(html, "<h4>来源</h4>[\\s\\S]*?<div class=content><p>([\\s\\S]*?)</p></div><center>"));
         Matcher matcher = Pattern.compile("\\[(.*)\\](.*)").matcher(info.title);
         if (matcher.find()) {
             info.title = matcher.group(2);
             info.source = matcher.group(1);
         }
+        info.timeLimit=1000;
+        info.memoryLimit=256000;
+        try{
         info.timeLimit = (1000 * Integer.parseInt(Tools.regFind(html, ": </span>(\\d+) Sec")));
         info.memoryLimit = (1024 * Integer.parseInt(Tools.regFind(html, ": </span>(\\d+) MB")));
-        info.description = (Tools.regFind(html, "<h2>Description</h2>([\\s\\S]*?)<h2>Input</h2>"));
-        info.input = (Tools.regFind(html, "<h2>Input</h2>([\\s\\S]*?)<h2>Output</h2>"));
-        info.output = (Tools.regFind(html, "<h2>Output</h2>([\\s\\S]*?)<h2>Sample Input</h2>"));
-        info.sampleInput = (Tools.regFind(html, "<h2>Sample Input</h2>([\\s\\S]*?)<h2>Sample Output</h2>").replaceAll("<span", "<pre").replaceAll("</span>", "</pre>").replace("<br /> ", "<br />"));
-        info.sampleOutput = (Tools.regFind(html, "<h2>Sample Output</h2>([\\s\\S]*?)<h2>HINT</h2>").replaceAll("<span", "<pre").replaceAll("</span>", "</pre>").replace("<br /> ", "<br />"));
-        info.hint = (Tools.regFind(html, "<h2>HINT</h2>([\\s\\S]*?)<h2>Source</h2>"));
+        }catch(Exception e){
+        	
+        }
+        info.description = (Tools.regFind(html, "<h4>Description</h4>([\\s\\S]*?)<h4>Input</h4>"));
+        info.input = (Tools.regFind(html, "<h4>Input</h4>([\\s\\S]*?)<h4>Output</h4>"));
+        info.output = (Tools.regFind(html, "<h4>Output</h4>([\\s\\S]*?)<h4>Sample Input</h4>"));
+        info.sampleInput = (Tools.regFind(html, "<h4>Sample Input</h4>([\\s\\S]*?)<h4>Sample Output</h4>").replaceAll("<span", "<pre").replaceAll("</span>", "</pre>").replace("<br /> ", "<br />"));
+        info.sampleOutput = (Tools.regFind(html, "<h4>Sample Output</h4>([\\s\\S]*?)<h4>HINT</h4>").replaceAll("<span", "<pre").replaceAll("</span>", "</pre>").replace("<br /> ", "<br />"));
+        info.hint = (Tools.regFind(html, "<h4>HINT</h4>([\\s\\S]*?)<h4>Source</h4>"));
         info.url = problemUrl;
-        if("".equals(info.description)){
-        	int start=html.indexOf("题目描述");
-        	int end=html.indexOf("来源");
+        if(html.contains("MarkForVirtualJudge")){
+        	int start=html.indexOf("<!--StartMarkForVirtualJudge-->")+"<!--StartMarkForVirtualJudge-->".length();
+        	int end=html.indexOf("<!--EndMarkForVirtualJudge-->")-1;
+        	info.description=html.substring(start,end);
+        }else{
+        	int start=html.indexOf("题目描述")+"题目描述".length();
+        	int end=html.lastIndexOf("来源")-1;
         	info.description=html.substring(start,end);
         }
-        Validate.isTrue(!StringUtils.isBlank(info.title));
+        System.out.println("titile:"+info.title);
+        //Validate.isTrue(!StringUtils.isBlank(info.title));
 
         return info;
     }
